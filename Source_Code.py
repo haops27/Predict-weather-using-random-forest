@@ -2,20 +2,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, mean_squared_error, classification_report
+from sklearn.metrics import accuracy_score, mean_squared_error, classification_report, confusion_matrix
 from imblearn.over_sampling import BorderlineSMOTE
 
 # 1. Load and combine datasets
 def load_weather_data():
     df1 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
-    df2 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
-    df3 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
-    df4 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
+    df2 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2018-2020.csv')
+    df3 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2020-2022.csv')
+    df4 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2022-2025.csv')
     df = pd.concat([df1, df2, df3, df4], ignore_index=True)
     
     # Convert datetime column to datetime type
@@ -97,7 +96,6 @@ if __name__ == "__main__":
     plt.show()
 
     # 7. Confusion Matrix
-    from sklearn.metrics import confusion_matrix
     cm = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(12, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',

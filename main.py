@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os
+
 from Source_Code import load_weather_data, model_training
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
-import joblib
 
 # Set page config
 st.set_page_config(
