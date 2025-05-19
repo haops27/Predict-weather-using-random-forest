@@ -12,45 +12,23 @@ from imblearn.over_sampling import BorderlineSMOTE
 
 # 1. Load and combine datasets
 def load_weather_data():
-    # Get the current directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    datasets_dir = os.path.join(current_dir, 'datasets-main', 'datasets-main')
-    
-    # List of dataset files
-    files = [
-        os.path.join(datasets_dir, 'hanoi 2016-2018.csv'),
-        os.path.join(datasets_dir, 'hanoi 2018-2020.csv'),
-        os.path.join(datasets_dir, 'hanoi 2020-2022.csv'),
-        os.path.join(datasets_dir, 'hanoi 2022-2025.csv')
-    ]
-    
-    # Read and combine all datasets
-    dfs = []
-    for file in files:
-        if os.path.exists(file):
-            df = pd.read_csv(file)
-            dfs.append(df)
-        else:
-            print(f"Warning: File not found: {file}")
-    
-    if not dfs:
-        raise FileNotFoundError("No dataset files found. Please check the dataset directory.")
-    
-    # Combine all dataframes
-    combined_df = pd.concat(dfs, ignore_index=True)
+    df1 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
+    df2 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
+    df3 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
+    df4 = pd.read_csv('Predict-weather-using-random-forest/datasets-main/hanoi 2016-2018.csv')
+    df = pd.concat([df1, df2, df3, df4], ignore_index=True)
     
     # Convert datetime column to datetime type
-    combined_df['datetime'] = pd.to_datetime(combined_df['datetime'])
+    df['datetime'] = pd.to_datetime(df['datetime'])
     
     # Extract time-based features
-    combined_df['month'] = combined_df['datetime'].dt.month
-    combined_df['day'] = combined_df['datetime'].dt.day
-    combined_df['hour'] = combined_df['datetime'].dt.hour
+    df['year'] = df['datetime'].dt.year
+    df['month'] = df['datetime'].dt.month
+    df['day'] = df['datetime'].dt.day
     
-    return combined_df
+    return df
 
-# Only run the model training if this file is run directly
-if __name__ == "__main__":
+def model_training():
     # Load the data
     df = load_weather_data()
 
@@ -58,9 +36,9 @@ if __name__ == "__main__":
     # Select features and target
     target_column = 'conditions'  # Predicting weather conditions
     feature_columns = [
-        'temp', 'humidity', 'precip', 'windspeed', 'cloudcover', 
-        'sealevelpressure', 'solarradiation', 'uvindex',
-        'month', 'day', 'hour'  # Include time-based features here
+        'temp', 'humidity', 'precip', 'precipcover', 'windspeed', 'cloudcover',
+        'sealevelpressure', 'solarradiation', 'visibility',
+        'year', 'month', 'day'  # Include time-based features here
     ]
 
     # Handle missing values
@@ -90,6 +68,12 @@ if __name__ == "__main__":
         n_jobs=-1
     )
     rf.fit(X_train_res, y_train_res)
+
+    return rf, feature_columns, target_column, le, X_test, y_test
+
+# Only run the model training if this file is run directly
+if __name__ == "__main__":
+    rf, feature_columns, target_column, le, X_test, y_test = model_training()
 
     # 5. Predictions & Evaluation
     y_pred = rf.predict(X_test)

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-from Source_Code import load_weather_data
+from Source_Code import load_weather_data, model_training
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 import joblib
@@ -25,31 +25,8 @@ Enter the weather parameters below to get a prediction.
 @st.cache_data
 def load_model_and_data():
     try:
-        # Load the data
-        df = load_weather_data()
-        
-        # Prepare the model
-        feature_columns = [
-            'temp', 'humidity', 'precip', 'windspeed', 'cloudcover', 
-            'sealevelpressure', 'solarradiation', 'uvindex',
-            'month', 'day', 'hour'
-        ]
-        
-        # Encode categorical target variable
-        le = LabelEncoder()
-        y = le.fit_transform(df['conditions'])
-        
-        # Prepare features
-        X = df[feature_columns]
-        
-        # Train the model
-        rf = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
-            random_state=42,
-            n_jobs=-1
-        )
-        rf.fit(X, y)
+
+        rf, feature_columns, target_column, le, X_test, y_test = model_training()
         
         return rf, le, feature_columns, None
     except Exception as e:
@@ -77,16 +54,17 @@ with col1:
     temp = st.number_input("Temperature (°C)", -50.0, 50.0, 25.0)
     humidity = st.number_input("Humidity (%)", 0.0, 100.0, 50.0)
     precip = st.number_input("Precipitation (mm)", 0.0, 100.0, 0.0)
+    precipcover = st.number_input("Precipitation coverage (%)", 0.0, 100.0, 10.0)
     windspeed = st.number_input("Wind Speed (km/h)", 0.0, 200.0, 10.0)
     cloudcover = st.number_input("Cloud Cover (%)", 0.0, 100.0, 50.0)
 
 with col2:
-    sealevelpressure = st.number_input("Sea Level Pressure (hPa)", 900.0, 1100.0, 1013.0)
+    sealevelpressure = st.number_input("Sea Level Pressure (mb)", 900.0, 1100.0, 1013.0)
     solarradiation = st.number_input("Solar Radiation (W/m²)", 0.0, 1000.0, 500.0)
-    uvindex = st.number_input("UV Index", 0.0, 12.0, 5.0)
+    visibility = st.number_input("Visibility", 0.0, 50.0, 5.0)
+    year = st.number_input("Year", 1970, 2100, 2025)
     month = st.number_input("Month", 1, 12, 6)
     day = st.number_input("Day", 1, 31, 15)
-    hour = st.number_input("Hour", 0, 23, 12)
 
 # Create prediction button
 if st.button("Predict Weather Condition"):
@@ -95,14 +73,15 @@ if st.button("Predict Weather Condition"):
         'temp': [temp],
         'humidity': [humidity],
         'precip': [precip],
+        'precipcover': [precipcover],
         'windspeed': [windspeed],
         'cloudcover': [cloudcover],
         'sealevelpressure': [sealevelpressure],
         'solarradiation': [solarradiation],
-        'uvindex': [uvindex],
+        'visibility': [visibility],
+        'year': [year],
         'month': [month],
         'day': [day],
-        'hour': [hour]
     })
     
     # Make prediction
