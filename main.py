@@ -1,124 +1,95 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+from Source_Code import model_training
 
-from Source_Code import load_weather_data, model_training
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
+# Load model once
+@st.cache_resource
+def load_model():
+    rf, feature_columns, target_column, le, _, _ = model_training()
+    return rf, feature_columns, le
 
-# Set page config
-st.set_page_config(
-    page_title="Weather Condition Predictor",
-    page_icon="🌤️",
-    layout="wide"
-)
+rf, feature_columns, le = load_model()
 
-# Title and description
-st.title("🌤️ Weather Condition Predictor")
-st.markdown("""
-This application predicts weather conditions based on various meteorological parameters.
-Enter the weather parameters below to get a prediction.
-""")
+# Title
+st.title("🌤️ Hanoi Weather Condition Predictor")
+st.markdown("Upload a CSV or fill in values manually to get weather condition predictions.")
 
-# Load the model and data
-@st.cache_data
-def load_model_and_data():
-    try:
+# Upload option
+uploaded_file = st.file_uploader("📁 Upload CSV file with weather data", type=["csv"])
 
-        rf, feature_columns, target_column, le, X_test, y_test = model_training()
-        
-        return rf, le, feature_columns, None
-    except Exception as e:
-        return None, None, None, str(e)
+# If file uploaded
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
 
-# Load model and data
-model, label_encoder, feature_columns, error = load_model_and_data()
+    # Extract year/month/day if datetime exists
+    if 'datetime' in df.columns:
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        df['year'] = df['datetime'].dt.year
+        df['month'] = df['datetime'].dt.month
+        df['day'] = df['datetime'].dt.day
 
-if error:
-    st.error(f"""
-    ⚠️ Error loading the model: {error}
     
-    Please make sure:
-    1. The datasets are in the correct location
-    2. All required packages are installed
-    3. You have proper permissions to access the files
-    """)
-    st.stop()
+    fill_columns = ['windgust', 'solarradiation', 'solarenergy', 'uvindex']
+    for col in fill_columns:
+        if col in df.columns:
+            df[col] = df[col].fillna(df[col].median())
 
-# Create input form
-st.subheader("Input Parameters")
-col1, col2 = st.columns(2)
+    for col in df.columns:
+        if df[col].dtype != object and col != 'datetime':
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower = Q1 - 1.5 * IQR
+            upper = Q3 + 1.5 * IQR
+            df[col] = df[col].clip(lower=lower, upper=upper)
 
-with col1:
-    temp = st.number_input("Temperature (°C)", -50.0, 50.0, 25.0)
-    humidity = st.number_input("Humidity (%)", 0.0, 100.0, 50.0)
-    precip = st.number_input("Precipitation (mm)", 0.0, 100.0, 0.0)
-    precipcover = st.number_input("Precipitation coverage (%)", 0.0, 100.0, 10.0)
-    windspeed = st.number_input("Wind Speed (km/h)", 0.0, 200.0, 10.0)
-    cloudcover = st.number_input("Cloud Cover (%)", 0.0, 100.0, 50.0)
+    # Check required columns
+    missing = [col for col in feature_columns if col not in df.columns]
+    if missing:
+        st.error(f"Missing columns: {', '.join(missing)}")
+    else:
+        st.success("✅ File looks good! Generating predictions...")
 
-with col2:
-    sealevelpressure = st.number_input("Sea Level Pressure (mb)", 900.0, 1100.0, 1013.0)
-    solarradiation = st.number_input("Solar Radiation (W/m²)", 0.0, 1000.0, 500.0)
-    visibility = st.number_input("Visibility", 0.0, 50.0, 5.0)
-    year = st.number_input("Year", 1970, 2100, 2025)
-    month = st.number_input("Month", 1, 12, 6)
-    day = st.number_input("Day", 1, 31, 15)
+        predictions = rf.predict(df[feature_columns])
+        decoded = le.inverse_transform(predictions)
+        df['Predicted Condition'] = decoded
 
-# Create prediction button
-if st.button("Predict Weather Condition"):
-    # Prepare input data
-    input_data = pd.DataFrame({
-        'temp': [temp],
-        'humidity': [humidity],
-        'precip': [precip],
-        'precipcover': [precipcover],
-        'windspeed': [windspeed],
-        'cloudcover': [cloudcover],
-        'sealevelpressure': [sealevelpressure],
-        'solarradiation': [solarradiation],
-        'visibility': [visibility],
-        'year': [year],
-        'month': [month],
-        'day': [day],
-    })
-    
-    # Make prediction
-    prediction = model.predict(input_data)
-    predicted_condition = label_encoder.inverse_transform(prediction)[0]
-    
-    # Display prediction
-    st.subheader("Prediction Result")
-    st.success(f"Predicted Weather Condition: {predicted_condition}")
-    
-    # Display feature importances
-    st.subheader("Feature Importances")
-    importances = pd.Series(model.feature_importances_, index=feature_columns)
-    importances = importances.sort_values(ascending=False)
-    
-    # Create a bar chart of feature importances
-    st.bar_chart(importances)
+        # ✅ Toggle display mode
+        view_mode = st.radio("📊 Choose display mode:", ["Full Table", "Only Date + Prediction"])
 
-# Add some information about the model
-st.sidebar.title("About")
-st.sidebar.info("""
-This application uses a Random Forest Classifier to predict weather conditions based on various meteorological parameters.
+        if view_mode == "Full Table":
+            st.dataframe(df)
+        else:
+            if 'datetime' in df.columns:
+                df_display = df[["datetime", "Predicted Condition", "conditions"]].copy()
+                df_display["datetime"] = df_display["datetime"].dt.strftime("%Y-%m-%d")  # Format date only
+                st.dataframe(df_display)
+            else:
+                st.warning("⚠️ 'datetime' column not found. Showing predictions only.")
+                st.dataframe(df[["Predicted Condition"]])
 
-The model was trained on historical weather data from Hanoi, Vietnam, and can predict weather conditions such as:
-- Clear
-- Partly Cloudy
-- Cloudy
-- Rain
-- And more...
+        # ✅ Download button
+        csv = df.to_csv(index=False).encode()
+        st.download_button("📥 Download Predictions as CSV", csv, "weather_predictions.csv", "text/csv")
 
-The prediction is based on the following parameters:
-- Temperature
-- Humidity
-- Precipitation
-- Wind Speed
-- Cloud Cover
-- Sea Level Pressure
-- Solar Radiation
-- UV Index
-- Time-based features (Month, Day, Hour)
-""") 
+else:
+    # Manual entry form
+    st.subheader("🔢 Or enter values manually")
+    with st.form("manual_form"):
+        inputs = {}
+        for col in feature_columns:
+            if col == 'year':
+                inputs[col] = st.number_input("Year", min_value=0, max_value=2025, value=0)
+            elif col == 'month':
+                inputs[col] = st.number_input("Month", min_value=0, max_value=12, value=0)
+            elif col == 'day':
+                inputs[col] = st.number_input("Day", min_value=0, max_value=31, value=0)
+            else:
+                inputs[col] = st.number_input(f"{col.title()}", value=0.0)
+        submitted = st.form_submit_button("Predict")
+
+    if submitted:
+        input_df = pd.DataFrame([inputs])[feature_columns]
+        prediction_encoded = rf.predict(input_df)
+        prediction_decoded = le.inverse_transform(prediction_encoded)
+        st.success(f"🌦️ Predicted Weather Condition: **{prediction_decoded[0]}**")
