@@ -19,7 +19,6 @@ This project aims to develop a machine learning model that can predict weather p
 - `Source_Code.py`: A shortened and simplified version of the notebook for easier understanding.
 - `main.py`: Launches the streamlit demo
 - `requirements.txt`: Python libraries and packages required to run the model
-- `datasets-main`: Contains the datasets we have used to train our model
 
 ## How to run
 1. Open terminal and clone our GitHub repository: https://github.com/haops27/Predict-weather-using-random-forest.git and go to the file containing our repo: `cd path/to/Predict-weather-using-random-forest`
