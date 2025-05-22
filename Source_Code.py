@@ -13,10 +13,10 @@ from imblearn.over_sampling import BorderlineSMOTE
 # === 1. Load and combine datasets ===
 def load_weather_data():
     files = [
-        'Predict-weather-using-random-forest/datasets/hanoi 2016-2018.csv',
-        'Predict-weather-using-random-forest/datasets/hanoi 2018-2020.csv',
-        'Predict-weather-using-random-forest/datasets/hanoi 2020-2022.csv',
-        'Predict-weather-using-random-forest/datasets/hanoi 2022-2025.csv'
+        'datasets/hanoi 2016-2018.csv',
+        'datasets/hanoi 2018-2020.csv',
+        'datasets/hanoi 2020-2022.csv',
+        'datasets/hanoi 2022-2025.csv'
     ]
     df_list = [pd.read_csv(file) for file in files]
     df = pd.concat(df_list, ignore_index=True)
